@@ -19,5 +19,5 @@ const db = new sqlite.Database(
 // db.run(sql);
 
 // const sql =
-// " CREATE TABLE IF NOT EXISTS RecipeIngredients(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,recipeId INT, FOREIGN KEY (recipeId) REFERENCES RecipesList(recipeId))";
+//   " CREATE TABLE IF NOT EXISTS Together(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,recipeId INT, FOREIGN KEY (recipeId) REFERENCES RecipesList(recipeId), ingredientId INT NOT NULL, FOREIGN KEY (ingredientId) REFERENCES IngredientsList(ingredientId))";
 // db.run(sql);
