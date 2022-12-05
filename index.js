@@ -123,6 +123,25 @@ app.get("/recipe/:recipe_Id/all", (req, res) => {
     );
   });
 });
+// get a particular step of a particular recipe
+app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
+  let recipeId = req.params.recipe_Id;
+  let stepId = req.params.step_Id;
+  let data = [];
+  db.serialize(() => {
+    db.each(
+      `SELECT s.step_detail,s.step_Id FROM Steps s INNER JOIN Recipes r ON r.recipe_Id=s.recipe_Id WHERE r.recipe_Id=${recipeId} AND step_Id=${stepId};`,
+      (err, row) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        data.push({ stepId: row.step_Id, text: row.step_detail });
+      },
+      () => {
+        res.send(data);
+      }
+    );
+  });
+});
+
 // Server listening
 app.listen(port, () => {
   console.log(`server is running at http://${hostname}:${port}`);
