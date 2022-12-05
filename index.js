@@ -77,15 +77,21 @@ app.get("/recipe", (req, res) => {
 app.get("/recipe/:recipe_Id", (req, res) => {
   let recipeId = req.params.recipe_Id;
   let data = [];
+  let recipeName = [];
+  let ingredients = [];
   // console.log(recipeId);
   db.serialize(() => {
     db.each(
-      "SELECT r.recipe_Name, i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id;",
+      `SELECT r.recipe_Name, i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id WHERE r.recipe_Id= ${recipeId};`,
 
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
         console.log(row);
-        data.push(row);
+        recipeName.push(row.recipe_Name);
+        ingredients.push(row.ingredient_Type);
+        // data = [recipeName[0], [...ingredients]];
+        data = [{ recipeName: recipeName[0], ingredients: [...ingredients] }];
+        // data.push(row);
       },
       () => {
         res.send(data);
