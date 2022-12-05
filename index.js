@@ -55,13 +55,13 @@ let sql;
 
 // get all recipes
 app.get("/recipe", (req, res) => {
+  console.log("usertype", req.params);
   let data = [];
   db.serialize(() => {
     db.each(
-      "SELECT * FROM Recipes;",
+      "SELECT * FROM Recipes WHERE category='Free';",
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
-        console.log(row.recipe_Name);
         data.push(row);
       },
       () => {
