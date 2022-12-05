@@ -86,20 +86,18 @@ app.get("/recipe/:recipe_Id", (req, res) => {
 
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
-        console.log(row);
+        // console.log(row);
         recipeName = row.recipe_Name;
         stepsCount = row.step_Count;
         let measureText = row.measure;
         let ingredientType = row.ingredient_Type;
         let ingredient = { type: ingredientType, amount: measureText };
-        console.log(ingredient);
         ingredients.push(ingredient);
         data = {
           recipeName: recipeName,
           ingredients: [...ingredients],
           stepCount: stepsCount,
         };
-        // data.push(row);
       },
       () => {
         res.send(data);
@@ -107,16 +105,24 @@ app.get("/recipe/:recipe_Id", (req, res) => {
     );
   });
 });
-// for retrieving ingredients of a recipe
 
-// select * from Recipes Where recipe_Name = "Pancakes";
-// SELECT * from Ingredients;
-// select * from RecipeIngredients;
-
-// SELECT r.recipe_Name, i.ingredient_Name
-// from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id
-// inner join Ingredients i on t.ingredient_Id = i.ingredient_Id;
-
+// get detailed steps of a given recipe
+app.get("/recipe/:recipe_Id/all", (req, res) => {
+  let recipeId = req.params.recipe_Id;
+  let data = [];
+  db.serialize(() => {
+    db.each(
+      `SELECT s.step_detail,s.step_Id FROM Steps s INNER JOIN Recipes r ON r.recipe_Id=s.recipe_Id WHERE r.recipe_Id=${recipeId};`,
+      (err, row) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        data.push({ stepId: row.step_Id, text: row.step_detail });
+      },
+      () => {
+        res.send(data);
+      }
+    );
+  });
+});
 // Server listening
 app.listen(port, () => {
   console.log(`server is running at http://${hostname}:${port}`);
