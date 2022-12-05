@@ -70,14 +70,18 @@ app.get("/recipe", (req, res) => {
     );
   });
 });
+//  `SELECT * FROM Recipes WHERE recipe_Id= ${recipeId};`,
+// const getRecipeIngredients =
+//   "SELECT r.recipe_Name, i.ingredient_Name from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id;";
 // Get a particular recipe
 app.get("/recipe/:recipe_Id", (req, res) => {
   let recipeId = req.params.recipe_Id;
   let data = [];
-  console.log(recipeId);
+  // console.log(recipeId);
   db.serialize(() => {
     db.each(
-      `SELECT * FROM Recipes WHERE recipe_Id= ${recipeId};`,
+      "SELECT r.recipe_Name, i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id;",
+
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
         console.log(row);
