@@ -53,7 +53,7 @@ let sql;
 //   }
 // });
 
-// working
+// get all recipes
 app.get("/recipe", (req, res) => {
   let data = [];
   db.serialize(() => {
@@ -70,6 +70,34 @@ app.get("/recipe", (req, res) => {
     );
   });
 });
+// Get a particular recipe
+app.get("/recipe/:recipe_Id", (req, res) => {
+  let recipeId = req.params.recipe_Id;
+  let data = [];
+  console.log(recipeId);
+  db.serialize(() => {
+    db.each(
+      `SELECT * FROM Recipes WHERE recipe_Id= ${recipeId};`,
+      (err, row) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        console.log(row);
+        data.push(row);
+      },
+      () => {
+        res.send(data);
+      }
+    );
+  });
+});
+// for retrieving ingredients of a recipe
+
+// select * from Recipes Where recipe_Name = "Pancakes";
+// SELECT * from Ingredients;
+// select * from RecipeIngredients;
+
+// SELECT r.recipe_Name, i.ingredient_Name
+// from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id
+// inner join Ingredients i on t.ingredient_Id = i.ingredient_Id;
 
 // Server listening
 app.listen(port, () => {
