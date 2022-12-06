@@ -70,7 +70,7 @@ app.get("/recipe", (req, res) => {
   if (req.cookies.usertype === "premium") {
     db.serialize(() => {
       db.each(
-        "SELECT * FROM Recipes WHERE category='Premium';",
+        "SELECT * FROM Recipes;",
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
           data.push(row);
