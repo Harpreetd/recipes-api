@@ -166,9 +166,23 @@ app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
 });
 
 // Get all recipes that have a given ingredient
-// app.get("/search/:ingredient", (req, res) => {
-//   let ingredientId = req.params.ingredient;
-// });
+app.get("/search/:ingredient", (req, res) => {
+  let ingredientType = req.params.ingredient;
+  let data = [];
+  db.serialize(() => {
+    db.each(
+      "Select r.recipe_Name,i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id WHERE i.ingredient_Type LIKE ?;",
+      `%${ingredientType}%`,
+      (err, row) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        data.push(row.recipe_Name);
+      },
+      () => {
+        res.send(data);
+      }
+    );
+  });
+});
 
 // Get list af all the ingredients available in database
 app.get("/ingredients", (req, res) => {
