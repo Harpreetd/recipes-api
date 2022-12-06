@@ -105,11 +105,11 @@ app.get("/recipe/:recipe_Id", (req, res) => {
   let ingredients = [];
   db.serialize(() => {
     db.each(
-      `SELECT r.recipe_Name,r.step_Count, i.ingredient_Type, m.measure from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id inner JOIN Measurements m on m.measure_Id=t.measure_Id WHERE r.recipe_Id=${recipeId};`,
-
+      `SELECT r.recipe_Name,r.step_Count, i.ingredient_Type, m.measure from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id inner JOIN Measurements m on m.measure_Id=t.measure_Id WHERE r.recipe_Id=?;`,
+      recipeId,
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
-        // console.log(row);
+
         recipeName = row.recipe_Name;
         stepsCount = row.step_Count;
         let measureText = row.measure;
@@ -157,6 +157,29 @@ app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
         data.push({ stepId: row.step_Id, text: row.step_detail });
+      },
+      () => {
+        res.send(data);
+      }
+    );
+  });
+});
+
+// Get all recipes that have a given ingredient
+// app.get("/search/:ingredient", (req, res) => {
+//   let ingredientId = req.params.ingredient;
+// });
+
+// Get list af all the ingredients available in database
+app.get("/ingredients", (req, res) => {
+  console.log(req.body);
+  let data = [];
+  db.serialize(() => {
+    db.each(
+      "SELECT ingredient_Type FROM Ingredients ",
+      (err, row) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        data.push(row.ingredient_Type);
       },
       () => {
         res.send(data);
