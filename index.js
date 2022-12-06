@@ -17,7 +17,7 @@ app.use(
     secret: "food monster",
     saveUninitialized: true,
     cookie: { maxAge: 6000 },
-    resave: true,
+    resave: false,
     secure: false,
   })
 );
@@ -29,7 +29,7 @@ const db = new sqlite.Database(__dirname + "./recipeCollection.db", (err) => {
   console.log("connection created");
 });
 // let sql;
-// just for testing ---working
+// get Premium user authorization
 app.get("/", (req, res) => {
   res.cookie("usertype", "premium");
   res.end();
@@ -65,7 +65,7 @@ app.get("/", (req, res) => {
 
 // get all recipes
 app.get("/recipe", (req, res) => {
-  console.log(req.cookies.usertype);
+  // console.log(req.cookies.usertype);
   let data = [];
   if (req.cookies.usertype === "premium") {
     db.serialize(() => {
@@ -96,6 +96,7 @@ app.get("/recipe", (req, res) => {
   }
 });
 
+// FREE TIER
 // Get a particular recipe
 app.get("/recipe/:recipe_Id", (req, res) => {
   let recipeId = req.params.recipe_Id;
@@ -167,41 +168,113 @@ app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
   });
 });
 
+// PREMIUM TIER
+
 // Get all recipes that have a given ingredient
 app.get("/search/:ingredient", (req, res) => {
   let ingredientType = req.params.ingredient;
+  // console.log(req.cookies.usertype);
   let data = [];
-  db.serialize(() => {
-    db.each(
-      "Select r.recipe_Name, r.recipe_Id, i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id WHERE i.ingredient_Type LIKE ?;",
-      `${ingredientType}`,
-      (err, row) => {
-        if (err) return res.json({ status: 300, success: false, error: err });
-        data.push({ recipeId: row.recipe_Id, recipeName: row.recipe_Name });
-      },
-      () => {
-        res.send(data);
-      }
-    );
-  });
+  if (req.cookies.usertype === "premium") {
+    db.serialize(() => {
+      db.each(
+        "Select r.recipe_Name, r.recipe_Id, i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id WHERE i.ingredient_Type LIKE ?;",
+        ingredientType,
+        (err, row) => {
+          if (err) return res.json({ status: 300, success: false, error: err });
+          data.push({ recipeId: row.recipe_Id, recipeName: row.recipe_Name });
+        },
+        () => {
+          res.send(data);
+        }
+      );
+    });
+  } else {
+    return res.json({
+      status: 401,
+      message:
+        "You are not authorized to access this, become a Premium user to get access",
+      success: false,
+    });
+  }
 });
 
 // Get list af all the ingredients available in database
 app.get("/ingredients", (req, res) => {
-  console.log(req.body);
+  // console.log(req.body);
   let data = [];
+  if (req.cookies.usertype === "premium") {
+    db.serialize(() => {
+      db.each(
+        "SELECT ingredient_Type FROM Ingredients ",
+        (err, row) => {
+          if (err) return res.json({ status: 300, success: false, error: err });
+          data.push(row.ingredient_Type);
+        },
+        () => {
+          res.send(data);
+        }
+      );
+    });
+  } else {
+    return res.json({
+      status: 401,
+      message:
+        "You are not authorized to access this, become a Premium user to get access",
+      success: false,
+    });
+  }
+});
+
+// ADMINISTRATOR
+
+// get Premium user authorization
+app.get("/auth", (req, res) => {
+  res.cookie("usertype", "admin");
+  res.end();
+});
+
+// ADD A NEW RECIPE
+
+app.post("/recipe", (req, res) => {
+  let data;
+  // if (req.cookies.usertype === "admin") {
+  const { name, category, ingredients, steps } = req.body;
+  console.log(name, category, ingredients, steps);
+  data = {
+    name: name,
+    category: category,
+    ingredients: ingredients,
+    steps: steps,
+  };
   db.serialize(() => {
-    db.each(
-      "SELECT ingredient_Type FROM Ingredients ",
-      (err, row) => {
-        if (err) return res.json({ status: 300, success: false, error: err });
-        data.push(row.ingredient_Type);
-      },
-      () => {
-        res.send(data);
-      }
+    db.run(
+      `INSERT INTO  Recipes (recipe_Name, category) VALUES (?, ?)`,
+      name,
+      category
+    );
+    db.run(`SELECT * from Recipes`);
+    // let id = db.lastInsertId();
+    let id = db.run(`SELECT last_insert_rowid();`);
+    console.log("id", id);
+    db.run(
+      `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
+      ingredients.type
+    );
+    db.run(
+      `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+      ingredients.entry,
+      id
+    );
+    db.run(
+      `INSERT INTO Steps (step_Id, step_detail,recipe_Id) VALUES (?,?,?)`,
+      steps.step_id,
+      steps.text,
+      id
     );
   });
+  // }
+  res.send(data);
 });
 
 // Server listening
