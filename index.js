@@ -153,7 +153,9 @@ app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
   let data = [];
   db.serialize(() => {
     db.each(
-      `SELECT s.step_detail,s.step_Id FROM Steps s INNER JOIN Recipes r ON r.recipe_Id=s.recipe_Id WHERE r.recipe_Id=${recipeId} AND step_Id=${stepId};`,
+      `SELECT s.step_detail,s.step_Id FROM Steps s INNER JOIN Recipes r ON r.recipe_Id=s.recipe_Id WHERE r.recipe_Id=? AND step_Id=?;`,
+      recipeId,
+      stepId,
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
         data.push({ stepId: row.step_Id, text: row.step_detail });
@@ -171,11 +173,11 @@ app.get("/search/:ingredient", (req, res) => {
   let data = [];
   db.serialize(() => {
     db.each(
-      "Select r.recipe_Name,i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id WHERE i.ingredient_Type LIKE ?;",
-      `%${ingredientType}%`,
+      "Select r.recipe_Name, r.recipe_Id, i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id WHERE i.ingredient_Type LIKE ?;",
+      `${ingredientType}`,
       (err, row) => {
         if (err) return res.json({ status: 300, success: false, error: err });
-        data.push(row.recipe_Name);
+        data.push({ recipeId: row.recipe_Id, recipeName: row.recipe_Name });
       },
       () => {
         res.send(data);
