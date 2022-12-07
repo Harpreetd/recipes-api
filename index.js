@@ -269,7 +269,6 @@ app.post("/recipe", (req, res) => {
           if (err) {
             res.status(404).json({ Error: "An error occured" });
           }
-          console.log(row);
           let id = row.recipe_Id;
 
           db.run(
@@ -313,9 +312,10 @@ app.post("/recipe", (req, res) => {
                         });
                       }
                       let measureId = row.measure_Id;
-                      console.log(measureId);
                       db.run(
-                        `UPDATE RecipeIngredients SET measure_Id =${measureId}  WHERE recipe_Id =${id} AND ingredient_Id = ${ingredientId}`
+                        `UPDATE RecipeIngredients SET measure_Id =${measureId}  WHERE recipe_Id =(?) AND ingredient_Id = (?)`,
+                        id,
+                        ingredientId
                       );
                     }
                   );
