@@ -239,12 +239,13 @@ app.get("/auth", (req, res) => {
 app.post("/recipe", (req, res) => {
   let data;
   // if (req.cookies.usertype === "admin") {
-  const { name, category, ingredients, steps } = req.body;
+  const { name, category, ingredients, stepCount, steps } = req.body;
   // console.log("data from request body ", name, category, ingredients, steps);
   data = {
     name: name,
     category: category,
     ingredients: ingredients,
+    stepCount: stepCount,
     steps: steps,
   };
   let recipeName = name;
@@ -253,45 +254,41 @@ app.post("/recipe", (req, res) => {
   let MeasureDetail = ingredients[0].entry;
   let stepNumber = steps[0].step_id;
   let stepText = steps[0].text;
-  // console.log("name", recipeName);
-  // console.log("category", categoryName);
-  // console.log("ingredient type", IngredientType);
-  // console.log("measurement", MeasureDetail);
-  // console.log("step id ", stepNumber);
-  // console.log("step text", stepText);
-
   let id;
   db.serialize(() => {
     db.each(
-      `INSERT INTO  Recipes (recipe_Name, category) VALUES (?, ?)`,
+      `INSERT INTO  Recipes (recipe_Name, step_Count, category) VALUES (?,?, ?)`,
       recipeName,
-      categoryName,
-      () => {
-        // if (err) {
-        //   return res.json({ status: false, val: err });
-        // } else {
-        id = this.lastID;
-        console.log(" id value  " + id);
-        // }
-      }
-    )
-      .run(
-        `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
-        stepNumber,
-        id,
-        stepText
-      )
-      .run("SELECT ingredient_Type from Ingredients")
-
-      .run(
-        `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
-        IngredientType
-      )
-      .run(
-        `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-        MeasureDetail,
-        id
+      stepCount,
+      categoryName
+    ),
+      db.each(
+        "SELECT recipe_Id FROM Recipes WHERE recipe_Name = ? ",
+        recipeName,
+        (err, row) => {
+          if (err) {
+            res.status(404).json({ Error: "An error occured" });
+          }
+          console.log(row);
+          // return (id = row.recipe_Id);
+          return row;
+        }
       );
+    db.run(
+      `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
+      stepNumber,
+      id,
+      stepText
+    );
+    db.run(
+      `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
+      IngredientType
+    );
+    db.run(
+      `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+      MeasureDetail,
+      id
+    );
   });
   // }
   res.send("recipe saved");
@@ -313,9 +310,32 @@ app.delete("/recipe/:recipe_Id", (req, res) => {
     db.each(
       `DELETE from Recipes WHERE recipe_Id = ?`,
       req.params.recipe_Id,
-      (err, row) => {
+      // `DELETE from Steps WHERE recipe_Id = ?`,
+      // req.params.recipe_Id,
+      // `DELETE from Measurements WHERE recipe_Id = ?`,
+      // req.params.recipe_Id,
+      (err, res) => {
         if (err) return res.json({ status: 300, success: false, error: err });
-        deletedRecord = row;
+        deletedRecord = res;
+      }
+      // () => {
+      //   res.send("record deleted");
+      // }
+    );
+    db.each(
+      `DELETE from Steps WHERE recipe_Id = ?`,
+      req.params.recipe_Id,
+      (err, res) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        deletedRecord = res;
+      }
+    );
+    db.each(
+      `DELETE from Measurements WHERE recipe_Id = ?`,
+      req.params.recipe_Id,
+      (err, res) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        deletedRecord = res;
       },
       () => {
         res.send("record deleted");
