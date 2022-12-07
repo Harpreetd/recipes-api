@@ -270,63 +270,62 @@ app.post("/recipe", (req, res) => {
             res.status(404).json({ Error: "An error occured" });
           }
           let id = row.recipe_Id;
-
-          db.run(
-            `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
-            stepNumber,
-            id,
-            stepText
-          ),
-            db.run(
-              `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
-              IngredientType
-            ),
+          for (let i = 0; i < steps.length; i++) {
             db.each(
-              "SELECT ingredient_Id FROM Ingredients WHERE ingredient_Type = ?",
-              IngredientType,
-              (err, row) => {
-                if (err) {
-                  res.status(404).json({
-                    Error: err.message,
-                  });
-                }
-                let ingredientId = row.ingredient_Id;
+              `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
+              steps[i].step_id,
+              id,
+              steps[i].text
+            );
+          }
+          for (let i = 0; i < ingredients.length; i++) {
+            db.each(
+              `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
+              ingredients[i].type
+            ),
+              db.each(
+                "SELECT ingredient_Id FROM Ingredients WHERE ingredient_Type = ?",
+                ingredients[i].type,
+                (err, row) => {
+                  if (err) {
+                    res.status(404).json({
+                      Error: err.message,
+                    });
+                  }
+                  let ingredientId = row.ingredient_Id;
+                  console.log("Ingredient id inside loop ", ingredientId);
+                  db.run(
+                    `INSERT INTO RecipeIngredients (recipe_Id, ingredient_Id) VALUES (?, ?)`,
+                    id,
+                    ingredientId
+                  );
 
-                db.run(
-                  `INSERT INTO RecipeIngredients (recipe_Id, ingredient_Id) VALUES (?, ?)`,
-                  id,
-                  ingredientId
-                ),
                   db.run(
                     `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-                    MeasureDetail,
+                    ingredients[i].entry,
                     id
                   ),
-                  db.each(
-                    "SELECT measure_Id FROM Measurements WHERE recipe_Id = ?",
-                    id,
-                    (err, row) => {
-                      if (err) {
-                        res.status(404).json({
-                          Error: err.message,
-                        });
+                    db.each(
+                      "SELECT measure_Id FROM Measurements WHERE recipe_Id = ?",
+                      id,
+                      (err, row) => {
+                        if (err) {
+                          res.status(404).json({
+                            Error: err.message,
+                          });
+                        }
+                        let measureId = row.measure_Id;
+                        db.run(
+                          `UPDATE RecipeIngredients SET measure_Id =${measureId}  WHERE recipe_Id =(?) AND ingredient_Id = (?)`,
+                          id,
+                          ingredientId
+                        );
                       }
-                      let measureId = row.measure_Id;
-                      db.run(
-                        `UPDATE RecipeIngredients SET measure_Id =${measureId}  WHERE recipe_Id =(?) AND ingredient_Id = (?)`,
-                        id,
-                        ingredientId
-                      );
-                    }
-                  );
-              }
-            );
+                    );
+                }
+              );
+          }
         },
-        // (err, res) => {
-        //   console.log("id inside last callback", id);
-        //   if (err) return res.json({ status: 300, success: false, error: err });
-        //   data = res;
-        // },
         () => {
           res.send(data);
         }
