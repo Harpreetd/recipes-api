@@ -130,7 +130,13 @@ app.get("/recipe/:recipe_Id", (req, res) => {
           };
         },
         () => {
-          res.send(data);
+          if (!data)
+            return res.json({
+              status: 404,
+              success: false,
+              error: "No recipes Found, try a different recipe",
+            });
+          return res.json({ status: 200, data: data, success: true });
         }
       );
     });
@@ -182,7 +188,13 @@ app.get("/recipe/:recipe_Id/all", (req, res) => {
           data.push({ stepId: row.step_Id, text: row.step_detail });
         },
         () => {
-          res.send(data);
+          if (data.length < 1)
+            return res.json({
+              status: 404,
+              success: false,
+              error: "No result found, try a different recipe",
+            });
+          return res.json({ status: 200, data: data, success: true });
         }
       );
     });
@@ -224,7 +236,13 @@ app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
           data.push({ stepId: row.step_Id, text: row.step_detail });
         },
         () => {
-          res.send(data);
+          if (data.length < 1)
+            return res.json({
+              status: 404,
+              success: false,
+              error: "No results found, try a different recipe.",
+            });
+          return res.json({ status: 200, data: data, success: true });
         }
       );
     });
@@ -268,7 +286,13 @@ app.get("/search/:ingredient", (req, res) => {
           data.push({ recipeId: row.recipe_Id, recipeName: row.recipe_Name });
         },
         () => {
-          res.send(data);
+          if (data.length < 1)
+            return res.json({
+              status: 404,
+              success: false,
+              error: "No Recipe found, try a different ingredient",
+            });
+          return res.json({ status: 200, data: data, success: true });
         }
       );
     });
@@ -294,7 +318,13 @@ app.get("/ingredients", (req, res) => {
           data.push(row.ingredient_Type);
         },
         () => {
-          res.send(data);
+          if (data.length < 1)
+            return res.json({
+              status: 404,
+              success: false,
+              error: "No ingredients Found,",
+            });
+          return res.json({ status: 200, data: data, success: true });
         }
       );
     });
@@ -396,7 +426,11 @@ app.post("/recipe", (req, res) => {
             }
           },
           () => {
-            res.send("Recipe saved successfully");
+            return res.json({
+              status: 200,
+              message: "Recipe saved successfully",
+              success: true,
+            });
           }
         );
     });
@@ -453,7 +487,11 @@ app.delete("/recipe/:recipe_Id", (req, res) => {
           deletedRecord = res;
         },
         () => {
-          res.send("record deleted");
+          return res.json({
+            status: 200,
+            message: "Recipe deleted successfully",
+            success: true,
+          });
         }
       );
     });
