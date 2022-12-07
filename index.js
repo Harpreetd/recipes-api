@@ -247,31 +247,64 @@ app.post("/recipe", (req, res) => {
     ingredients: ingredients,
     steps: steps,
   };
+  let stepDetail = data.steps[0];
+  console.log("stepDetail", stepDetail);
+  let id;
   db.serialize(() => {
     db.run(
       `INSERT INTO  Recipes (recipe_Name, category) VALUES (?, ?)`,
       name,
-      category
-    );
-    db.run(`SELECT * from Recipes`);
+      category,
+      function (err) {
+        if (err) {
+          res.send({ status: false, val: err });
+        } else {
+          id = this.lastID;
+          console.log(" id value  " + id);
+        }
+      }
+    )
+      .run(
+        `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
+        ingredients.type
+      )
+      .run(
+        `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+        ingredients.entry,
+        id
+      );
+    // .each(`SELECT MAX(recipe_Id) AS id FROM Recipes`)
+    // .run(
+    //   `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
+    //   ingredients.type
+    // )
+    // .run(
+    //   `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+    //   ingredients.entry,
+    //   id
+    // );
+    // db.run(`SELECT * from Recipes`);
+
     // let id = db.lastInsertId();
-    let id = db.run(`SELECT last_insert_rowid();`);
-    console.log("id", id);
-    db.run(
-      `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
-      ingredients.type
-    );
-    db.run(
-      `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-      ingredients.entry,
-      id
-    );
-    db.run(
-      `INSERT INTO Steps (step_Id, step_detail,recipe_Id) VALUES (?,?,?)`,
-      steps.step_id,
-      steps.text,
-      id
-    );
+    // let id = db.run(`SELECT last_insert_rowid();`);
+    // SELECT MAX(rowid) FROM your_table_name
+    // console.log("id", id);
+    // db.run(`SELECT MAX(recipe_Id) As id FROM Recipes`);
+    // db.run(
+    //   `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
+    //   ingredients.type
+    // );
+    // db.run(
+    //   `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+    //   ingredients.entry,
+    //   id
+    // );
+    // db.run(
+    //   `INSERT INTO Steps (step_Id, step_detail,recipe_Id) VALUES (?,?,?)`,
+    //   steps.step_id,
+    //   steps.text,
+    //   id
+    // );
   });
   // }
   res.send(data);
