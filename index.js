@@ -365,9 +365,8 @@ app.post("/recipe", (req, res) => {
           "SELECT recipe_Id FROM Recipes WHERE recipe_Name = ? ",
           recipeName,
           (err, row) => {
-            if (err) {
-              res.status(404).json({ Error: "An error occured" });
-            }
+            if (err)
+              return res.json({ status: 300, success: false, error: err });
             let id = row.recipe_Id;
             for (let i = 0; i < steps.length; i++) {
               db.each(
@@ -386,11 +385,12 @@ app.post("/recipe", (req, res) => {
                   "SELECT ingredient_Id FROM Ingredients WHERE ingredient_Type = ?",
                   ingredients[j].type,
                   (err, row) => {
-                    if (err) {
-                      res.status(404).json({
-                        Error: err.message,
+                    if (err)
+                      return res.json({
+                        status: 300,
+                        success: false,
+                        error: err,
                       });
-                    }
                     let ingredientId = row.ingredient_Id;
                     console.log("Ingredient id inside loop ", ingredientId);
                     db.run(
@@ -445,7 +445,33 @@ app.post("/recipe", (req, res) => {
 });
 
 // Update Recipe
-app.patch("/recipe/:recipe_Id", (req, res) => {});
+app.patch("/recipe/:recipe_Id", (req, res) => {
+  let newCategory = req.body.category;
+  console.log(newCategory);
+  if (req.cookies.usertype === "admin") {
+    db.serialize(() => {
+      db.each(
+        `UPDATE Recipes SET category= "${newCategory}" Where recipe_Id=?`,
+        req.params.recipe_Id,
+        (err, row) => {
+          if (err) return res.json({ status: 300, success: false, error: err });
+          return res.json({
+            status: 200,
+            message: "Category Updated successfully",
+            success: true,
+          });
+        }
+      );
+    });
+  } else {
+    return res.json({
+      status: 403,
+      message:
+        "You are not authorized to access this, become a Premium user to get access",
+      success: false,
+    });
+  }
+});
 
 // Replace Recipe
 app.put("/recipe/:recipe_Id", (req, res) => {});
