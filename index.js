@@ -277,16 +277,34 @@ app.post("/recipe", (req, res) => {
             stepNumber,
             id,
             stepText
-          );
-          db.run(
-            `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
-            IngredientType
-          );
-          db.run(
-            `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-            MeasureDetail,
-            id
-          );
+          ),
+            db.run(
+              `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
+              IngredientType
+            ),
+            db.run(
+              `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+              MeasureDetail,
+              id
+            ),
+            db.each(
+              "SELECT measure_Id FROM Measurements WHERE recipe_Id = ?",
+              id,
+              (err, row) => {
+                if (err) {
+                  res.status(404).json({
+                    Error: err.message,
+                  });
+                }
+                measureId = row.measure_Id;
+
+                db.run(
+                  `INSERT INTO RecipeIngredients (recipe_Id, measure_Id) VALUES (?, ?)`,
+                  id,
+                  measureId
+                );
+              }
+            );
         },
         // (err, res) => {
         //   console.log("id inside last callback", id);
