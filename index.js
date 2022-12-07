@@ -240,24 +240,35 @@ app.post("/recipe", (req, res) => {
   let data;
   // if (req.cookies.usertype === "admin") {
   const { name, category, ingredients, steps } = req.body;
-  console.log(name, category, ingredients, steps);
+  console.log("data from request body ", name, category, ingredients, steps);
   data = {
     name: name,
     category: category,
     ingredients: ingredients,
     steps: steps,
   };
-  let stepDetail = data.steps[0];
-  console.log("stepDetail", stepDetail);
+  let recipeName = name;
+  let categoryName = category;
+  let IngredientType = ingredients[0].type;
+  let MeasureDetail = ingredients[0].entry;
+  let stepNumber = steps[0].step_id;
+  let stepText = steps[0].text;
+  // console.log("name", recipeName);
+  // console.log("category", categoryName);
+  // console.log("ingredient type", IngredientType);
+  // console.log("measurement", MeasureDetail);
+  // console.log("step id ", stepNumber);
+  // console.log("step text", stepText);
+
   let id;
   db.serialize(() => {
-    db.run(
+    db.each(
       `INSERT INTO  Recipes (recipe_Name, category) VALUES (?, ?)`,
-      name,
-      category,
-      function (err) {
+      recipeName,
+      categoryName,
+      () => {
         if (err) {
-          res.send({ status: false, val: err });
+          return res.json({ status: false, val: err });
         } else {
           id = this.lastID;
           console.log(" id value  " + id);
@@ -265,52 +276,62 @@ app.post("/recipe", (req, res) => {
       }
     )
       .run(
-        `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
-        ingredients.type
+        `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
+        stepNumber,
+        id,
+        stepText
+      )
+      .run("SELECT ingredient_Type from Ingredients")
+
+      .run(
+        `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
+        IngredientType
       )
       .run(
         `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-        ingredients.entry,
+        MeasureDetail,
         id
       );
-    // .each(`SELECT MAX(recipe_Id) AS id FROM Recipes`)
-    // .run(
-    //   `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
-    //   ingredients.type
-    // )
-    // .run(
-    //   `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-    //   ingredients.entry,
-    //   id
-    // );
-    // db.run(`SELECT * from Recipes`);
-
-    // let id = db.lastInsertId();
-    // let id = db.run(`SELECT last_insert_rowid();`);
-    // SELECT MAX(rowid) FROM your_table_name
-    // console.log("id", id);
-    // db.run(`SELECT MAX(recipe_Id) As id FROM Recipes`);
-    // db.run(
-    //   `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
-    //   ingredients.type
-    // );
-    // db.run(
-    //   `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-    //   ingredients.entry,
-    //   id
-    // );
-    // db.run(
-    //   `INSERT INTO Steps (step_Id, step_detail,recipe_Id) VALUES (?,?,?)`,
-    //   steps.step_id,
-    //   steps.text,
-    //   id
-    // );
   });
   // }
-  res.send(data);
+  res.send("recipe saved");
+  // res.end();
 });
 
 // Server listening
 app.listen(port, () => {
   console.log(`server is running at http://${hostname}:${port}`);
 });
+
+// .each(`SELECT MAX(recipe_Id) AS id FROM Recipes`)
+// .run(
+//   `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
+//   ingredients.type
+// )
+// .run(
+//   `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+//   ingredients.entry,
+//   id
+// );
+// db.run(`SELECT * from Recipes`);
+
+// let id = db.lastInsertId();
+// let id = db.run(`SELECT last_insert_rowid();`);
+// SELECT MAX(rowid) FROM your_table_name
+// console.log("id", id);
+// db.run(`SELECT MAX(recipe_Id) As id FROM Recipes`);
+// db.run(
+//   `INSERT INTO Ingredients (ingredient_Type) VALUES(?)`,
+//   ingredients.type
+// );
+// db.run(
+//   `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+//   ingredients.entry,
+//   id
+// );
+// db.run(
+//   `INSERT INTO Steps (step_Id, step_detail,recipe_Id) VALUES (?,?,?)`,
+//   steps.step_id,
+//   steps.text,
+//   id
+// );
