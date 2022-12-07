@@ -240,7 +240,7 @@ app.post("/recipe", (req, res) => {
   let data;
   // if (req.cookies.usertype === "admin") {
   const { name, category, ingredients, stepCount, steps } = req.body;
-  // console.log("data from request body ", name, category, ingredients, steps);
+
   data = {
     name: name,
     category: category,
@@ -270,29 +270,37 @@ app.post("/recipe", (req, res) => {
             res.status(404).json({ Error: "An error occured" });
           }
           console.log(row);
-          // return (id = row.recipe_Id);
-          return row;
+          id = row.recipe_Id;
+
+          db.run(
+            `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
+            stepNumber,
+            id,
+            stepText
+          );
+          db.run(
+            `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
+            IngredientType
+          );
+          db.run(
+            `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+            MeasureDetail,
+            id
+          );
+        },
+        // (err, res) => {
+        //   console.log("id inside last callback", id);
+        //   if (err) return res.json({ status: 300, success: false, error: err });
+        //   data = res;
+        // },
+        () => {
+          res.send(data);
         }
       );
-    db.run(
-      `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
-      stepNumber,
-      id,
-      stepText
-    );
-    db.run(
-      `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
-      IngredientType
-    );
-    db.run(
-      `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-      MeasureDetail,
-      id
-    );
   });
   // }
-  res.send("recipe saved");
-  // res.end();
+
+  // res.send("recipe saved"););
 });
 
 // Update Recipe
