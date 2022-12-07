@@ -240,7 +240,7 @@ app.post("/recipe", (req, res) => {
   let data;
   // if (req.cookies.usertype === "admin") {
   const { name, category, ingredients, steps } = req.body;
-  console.log("data from request body ", name, category, ingredients, steps);
+  // console.log("data from request body ", name, category, ingredients, steps);
   data = {
     name: name,
     category: category,
@@ -267,12 +267,12 @@ app.post("/recipe", (req, res) => {
       recipeName,
       categoryName,
       () => {
-        if (err) {
-          return res.json({ status: false, val: err });
-        } else {
-          id = this.lastID;
-          console.log(" id value  " + id);
-        }
+        // if (err) {
+        //   return res.json({ status: false, val: err });
+        // } else {
+        id = this.lastID;
+        console.log(" id value  " + id);
+        // }
       }
     )
       .run(
@@ -296,6 +296,32 @@ app.post("/recipe", (req, res) => {
   // }
   res.send("recipe saved");
   // res.end();
+});
+
+// Update Recipe
+app.patch("/recipe/:recipe_Id", (req, res) => {});
+
+// Replace Recipe
+app.put("/recipe/:recipe_Id", (req, res) => {});
+
+// Delete Recipe
+
+app.delete("/recipe/:recipe_Id", (req, res) => {
+  console.log(req.params.recipe_Id);
+  let deletedRecord;
+  db.serialize(() => {
+    db.each(
+      `DELETE from Recipes WHERE recipe_Id = ?`,
+      req.params.recipe_Id,
+      (err, row) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        deletedRecord = row;
+      },
+      () => {
+        res.send("record deleted");
+      }
+    );
+  });
 });
 
 // Server listening
