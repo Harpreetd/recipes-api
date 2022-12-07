@@ -324,6 +324,14 @@ app.delete("/recipe/:recipe_Id", (req, res) => {
       }
     );
     db.each(
+      `DELETE from RecipeIngredients WHERE recipe_Id = ?`,
+      req.params.recipe_Id,
+      (err, res) => {
+        if (err) return res.json({ status: 300, success: false, error: err });
+        deletedRecord = res;
+      }
+    );
+    db.each(
       `DELETE from Measurements WHERE recipe_Id = ?`,
       req.params.recipe_Id,
       (err, res) => {
