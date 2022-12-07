@@ -254,7 +254,7 @@ app.post("/recipe", (req, res) => {
   let MeasureDetail = ingredients[0].entry;
   let stepNumber = steps[0].step_id;
   let stepText = steps[0].text;
-  let id;
+
   db.serialize(() => {
     db.each(
       `INSERT INTO  Recipes (recipe_Name, step_Count, category) VALUES (?,?, ?)`,
@@ -270,7 +270,7 @@ app.post("/recipe", (req, res) => {
             res.status(404).json({ Error: "An error occured" });
           }
           console.log(row);
-          id = row.recipe_Id;
+          let id = row.recipe_Id;
 
           db.run(
             `INSERT INTO Steps ( step_Id,recipe_Id,step_detail) VALUES (?,?,?)`,
@@ -282,27 +282,43 @@ app.post("/recipe", (req, res) => {
               `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
               IngredientType
             ),
-            db.run(
-              `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-              MeasureDetail,
-              id
-            ),
             db.each(
-              "SELECT measure_Id FROM Measurements WHERE recipe_Id = ?",
-              id,
+              "SELECT ingredient_Id FROM Ingredients WHERE ingredient_Type = ?",
+              IngredientType,
               (err, row) => {
                 if (err) {
                   res.status(404).json({
                     Error: err.message,
                   });
                 }
-                measureId = row.measure_Id;
+                let ingredientId = row.ingredient_Id;
 
                 db.run(
-                  `INSERT INTO RecipeIngredients (recipe_Id, measure_Id) VALUES (?, ?)`,
+                  `INSERT INTO RecipeIngredients (recipe_Id, ingredient_Id) VALUES (?, ?)`,
                   id,
-                  measureId
-                );
+                  ingredientId
+                ),
+                  db.run(
+                    `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
+                    MeasureDetail,
+                    id
+                  ),
+                  db.each(
+                    "SELECT measure_Id FROM Measurements WHERE recipe_Id = ?",
+                    id,
+                    (err, row) => {
+                      if (err) {
+                        res.status(404).json({
+                          Error: err.message,
+                        });
+                      }
+                      let measureId = row.measure_Id;
+                      console.log(measureId);
+                      db.run(
+                        `UPDATE RecipeIngredients SET measure_Id =${measureId}  WHERE recipe_Id =${id} AND ingredient_Id = ${ingredientId}`
+                      );
+                    }
+                  );
               }
             );
         },
