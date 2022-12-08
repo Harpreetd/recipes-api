@@ -31,7 +31,7 @@ const db = new sqlite.Database(__dirname + "./recipeCollection.db", (err) => {
 });
 
 // GET Recipes // Returns all Available recipes if user has premium/admin authorization and returns only free recipe for  normal user
-app.get("/recipe", (req, res) => {
+app.get("/recipes", (req, res) => {
   let data = [];
   if (req.cookies.usertype === "premium" || req.cookies.usertype === "admin") {
     db.serialize(() => {
