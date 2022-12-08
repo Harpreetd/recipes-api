@@ -395,13 +395,13 @@ app.post("/recipe", (req, res) => {
 
 //UPDATE THE CATEGORY OF A RECIPE WITH THE PARAMETER RECIPEID (INTEGER/NUMBER)
 app.patch("/recipe/:recipe_Id", (req, res) => {
+  let recipeId = req.params.recipe_Id;
   let newCategory = req.body.category;
-  console.log(newCategory);
   if (req.cookies.usertype === "admin") {
     db.serialize(() => {
       db.each(
         `UPDATE Recipes SET category= "${newCategory}" Where recipe_Id=?`,
-        req.params.recipe_Id,
+        recipeId,
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
           return res.json({
