@@ -12,6 +12,7 @@ app.use(bodyParser.json()); //using body-parser to parse the request body
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
+// Cookie Configuration
 app.use(
   sessions({
     secret: "food monster",
@@ -22,48 +23,14 @@ app.use(
   })
 );
 
-// connecting to the database
+// CONNECTING TO THE DATABSE
 const sqlite = require("sqlite3").verbose();
 const db = new sqlite.Database(__dirname + "./recipeCollection.db", (err) => {
   if (err) return console.error(err);
   console.log("connection created");
 });
-// let sql;
-// get Premium user authorization
-app.get("/", (req, res) => {
-  res.cookie("usertype", "premium");
-  res.end();
-});
 
-// get all recipes
-// app.get("/recipe", (req, res) => {
-//   sql = "SELECT * FROM Recipes WHERE recipe_Name='Pancakes'";
-//   console.log(sql);
-//   try {
-// db.serialize(()=>{
-
-//     db.run(sql, [], (err, rows) => {
-//       console.log("result of sql", rows);
-//       if (err) return res.json({ status: 300, success: false, error: err });
-//       if (rows.length < 1)
-//         return res.json({
-//           status: 300,
-//           success: false,
-//           error: "no match found",
-//         });
-//       return res.json({ status: 200, data: rows, success: true });
-//     });
-//   } catch (error) {
-//     return res.json({
-//       status: 404,
-//       error: error,
-//       success: false,
-//     });
-// })
-//   }
-// });
-
-// get all recipes
+// GET Recipes // Returns all Available recipes if user has premium/admin authorization and returns only free recipe for  normal user
 app.get("/recipe", (req, res) => {
   let data = [];
   if (req.cookies.usertype === "premium" || req.cookies.usertype === "admin") {
@@ -102,7 +69,7 @@ app.get("/recipe", (req, res) => {
 });
 
 // FREE TIER
-// Get a particular recipe
+// GET A PARTICULAR RECIPE WITH A PARAMETER OF recipe_Id (IINTEGER/NUMBER)
 app.get("/recipe/:recipe_Id", (req, res) => {
   let recipeId = req.params.recipe_Id;
   let data;
@@ -117,7 +84,6 @@ from Recipes r inner JOIN  Measurements m on m.recipe_Id=r.recipe_Id inner JOIN 
         recipeId,
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
-
           recipeName = row.recipe_Name;
           stepsCount = row.step_Count;
           let measureText = row.measure;
@@ -149,7 +115,6 @@ from Recipes r inner JOIN  Measurements m on m.recipe_Id=r.recipe_Id inner JOIN 
         recipeId,
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
-
           recipeName = row.recipe_Name;
           stepsCount = row.step_Count;
           let measureText = row.measure;
@@ -176,7 +141,7 @@ from Recipes r inner JOIN  Measurements m on m.recipe_Id=r.recipe_Id inner JOIN 
   }
 });
 
-// get detailed steps of a given recipe
+// GET DETAILED STEPS OF A RECIPE WITH A PARAMETER OF recipeId/all
 app.get("/recipe/:recipe_Id/all", (req, res) => {
   let recipeId = req.params.recipe_Id;
   let data = [];
@@ -222,7 +187,7 @@ app.get("/recipe/:recipe_Id/all", (req, res) => {
     });
   }
 });
-// get a particular step of a particular recipe
+// GET A PARTICULAR STEP OF A RECIPE WITH PARAMETERS recipe_Id AND step_Id (both INTEGER/NUMBER)
 app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
   let recipeId = req.params.recipe_Id;
   let stepId = req.params.step_Id;
@@ -273,8 +238,12 @@ app.get("/recipe/:recipe_Id/:step_Id", (req, res) => {
 });
 
 // PREMIUM TIER
-
-// Get all recipes that have a given ingredient
+// GET PREMIUM USER AUTHENTICATION
+app.get("/", (req, res) => {
+  res.cookie("usertype", "premium");
+  res.send("Congratulation! You have got Premium user authorization");
+});
+// GET ALL THE RECIPES THAT CONTAIN A SPECIFIC INGREDIENT WITH PARAMETER ingredient (STRING)
 app.get("/search/:ingredient", (req, res) => {
   let ingredientType = req.params.ingredient;
   let data = [];
@@ -308,7 +277,7 @@ app.get("/search/:ingredient", (req, res) => {
   }
 });
 
-// Get list af all the ingredients available in database
+// GET LIST OF ALL THE AVAILABLE INGREDIENTS
 app.get("/ingredients", (req, res) => {
   let data = [];
   if (req.cookies.usertype === "premium" || req.cookies.usertype === "admin") {
@@ -342,14 +311,13 @@ app.get("/ingredients", (req, res) => {
 
 // ADMINISTRATOR
 
-// get Premium user authorization
+// GET ADMIN AUTHORIZATION
 app.get("/auth", (req, res) => {
   res.cookie("usertype", "admin");
-  res.end();
+  res.send("You have got the admin authentication token");
 });
 
-// ADD A NEW RECIPE
-
+// ADD A NEW RECIPE TO THE DATABASE
 app.post("/recipe", (req, res) => {
   if (req.cookies.usertype === "admin") {
     const { name, category, ingredients, steps } = req.body;
@@ -358,7 +326,7 @@ app.post("/recipe", (req, res) => {
     let stepCount = steps.length;
     db.serialize(() => {
       db.each(
-        `INSERT INTO  Recipes (recipe_Name, step_Count, category) VALUES (?,?, ?)`,
+        `INSERT OR IGNORE INTO  Recipes (recipe_Name, step_Count, category) VALUES (?,?, ?)`,
         recipeName,
         stepCount,
         categoryName
@@ -394,7 +362,6 @@ app.post("/recipe", (req, res) => {
                         error: err,
                       });
                     let ingredientId = row.ingredient_Id;
-                    console.log("ingredient id", ingredientId);
                     db.run(
                       `INSERT INTO Measurements (measure,recipe_Id,ingredient_Id) VALUES (?,?, ?)`,
                       ingredients[j].entry,
@@ -405,7 +372,9 @@ app.post("/recipe", (req, res) => {
                 );
             }
           },
-          () => {
+          (err, result) => {
+            if (err)
+              return res.json({ status: 300, success: false, error: err });
             return res.json({
               status: 200,
               message: "Recipe saved successfully",
@@ -424,7 +393,7 @@ app.post("/recipe", (req, res) => {
   }
 });
 
-// Update Recipe
+//UPDATE THE CATEGORY OF A RECIPE WITH THE PARAMETER RECIPEID (INTEGER/NUMBER)
 app.patch("/recipe/:recipe_Id", (req, res) => {
   let newCategory = req.body.category;
   console.log(newCategory);
@@ -453,7 +422,7 @@ app.patch("/recipe/:recipe_Id", (req, res) => {
   }
 });
 
-// Replace Recipe
+// REPLACE A SPECIFIC RECIPE WITH PARAMETER RECIPEID (INTEGER/NUMBER)
 app.put("/recipe/:recipe_Id", (req, res) => {
   const recipeId = req.params.recipe_Id;
   console.log(recipeId);
@@ -482,9 +451,6 @@ app.put("/recipe/:recipe_Id", (req, res) => {
                       success: false,
                       error: err,
                     });
-                  console.log("i", i);
-                  console.log("steps row", row);
-                  console.log(steps[i].step_id);
                 }
               );
             }
@@ -512,7 +478,13 @@ app.put("/recipe/:recipe_Id", (req, res) => {
                 );
             }
           },
-          () => {
+          (err, result) => {
+            if (err)
+              return res.json({
+                status: 300,
+                success: false,
+                error: err,
+              });
             return res.json({
               status: 200,
               message: "Recipe updated successfully",
@@ -531,8 +503,7 @@ app.put("/recipe/:recipe_Id", (req, res) => {
   }
 });
 
-// Delete Recipe
-
+// DELETE A RECIPE WITH PARAMETER RECIPEID (INTEGER/NUMBER)
 app.delete("/recipe/:recipe_Id", (req, res) => {
   if (req.cookies.usertype === "admin") {
     db.serialize(() => {
@@ -552,14 +523,6 @@ app.delete("/recipe/:recipe_Id", (req, res) => {
           deletedRecord = res;
         }
       );
-      // db.each(
-      //   `DELETE from RecipeIngredients WHERE recipe_Id = ?`,
-      //   req.params.recipe_Id,
-      //   (err, res) => {
-      //     if (err) return res.json({ status: 300, success: false, error: err });
-      //     deletedRecord = res;
-      //   }
-      // );
       db.each(
         `DELETE from Measurements WHERE recipe_Id = ?`,
         req.params.recipe_Id,
@@ -567,7 +530,8 @@ app.delete("/recipe/:recipe_Id", (req, res) => {
           if (err) return res.json({ status: 300, success: false, error: err });
           deletedRecord = res;
         },
-        () => {
+        (err, result) => {
+          if (err) return res.json({ status: 300, success: false, error: err });
           return res.json({
             status: 200,
             message: "Recipe deleted successfully",
@@ -586,7 +550,7 @@ app.delete("/recipe/:recipe_Id", (req, res) => {
   }
 });
 
-// Server listening
+// SERVER LISTENIING
 app.listen(port, () => {
   console.log(`server is running at http://${hostname}:${port}`);
 });
