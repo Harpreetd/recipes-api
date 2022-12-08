@@ -250,7 +250,7 @@ app.get("/search/:ingredient", (req, res) => {
   if (req.cookies.usertype === "premium" || req.cookies.usertype === "admin") {
     db.serialize(() => {
       db.each(
-        "Select r.recipe_Name, r.recipe_Id, i.ingredient_Type from Recipes r inner JOIN Measurements m on m.recipe_Id=r.recipe_Id inner JOIN Ingredients i on i.ingredient_Id=m.ingredient_Id WHERE i.ingredient_Type LIKE",
+        "SELECT r.recipe_Name, r.recipe_Id, i.ingredient_Type from Recipes r inner JOIN Measurements m on m.recipe_Id=r.recipe_Id inner JOIN Ingredients i on i.ingredient_Id=m.ingredient_Id WHERE i.ingredient_Type LIKE ?",
         ingredientType,
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
