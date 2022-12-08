@@ -112,7 +112,8 @@ app.get("/recipe/:recipe_Id", (req, res) => {
   if (req.cookies.usertype === "premium" || req.cookies.usertype === "admin") {
     db.serialize(() => {
       db.each(
-        `SELECT r.recipe_Name,r.step_Count, i.ingredient_Type, m.measure from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id inner JOIN Measurements m on m.measure_Id=t.measure_Id WHERE r.recipe_Id=?;`,
+        `SELECT r.recipe_Name,r.step_Count, m.measure , i.ingredient_Type
+from Recipes r inner JOIN  Measurements m on m.recipe_Id=r.recipe_Id inner JOIN Ingredients i on i.ingredient_Id=m.ingredient_Id WHERE r.recipe_Id= ? ;`,
         recipeId,
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
@@ -143,7 +144,8 @@ app.get("/recipe/:recipe_Id", (req, res) => {
   } else {
     db.serialize(() => {
       db.each(
-        `SELECT r.recipe_Name,r.step_Count, i.ingredient_Type, m.measure from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id inner JOIN Measurements m on m.measure_Id=t.measure_Id WHERE r.recipe_Id=? AND r.category='Free';`,
+        `SELECT r.recipe_Name,r.step_Count, m.measure , i.ingredient_Type
+from Recipes r inner JOIN  Measurements m on m.recipe_Id=r.recipe_Id inner JOIN Ingredients i on i.ingredient_Id=m.ingredient_Id WHERE r.recipe_Id= ? AND r.category='Free';`,
         recipeId,
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
@@ -279,7 +281,7 @@ app.get("/search/:ingredient", (req, res) => {
   if (req.cookies.usertype === "premium" || req.cookies.usertype === "admin") {
     db.serialize(() => {
       db.each(
-        "Select r.recipe_Name, r.recipe_Id, i.ingredient_Type from Recipes r inner JOIN RecipeIngredients t on r.recipe_Id= t.recipe_Id inner join Ingredients i on t.ingredient_Id = i.ingredient_Id WHERE i.ingredient_Type LIKE ?;",
+        "Select r.recipe_Name, r.recipe_Id, i.ingredient_Type from Recipes r inner JOIN Measurements m on m.recipe_Id=r.recipe_Id inner JOIN Ingredients i on i.ingredient_Id=m.ingredient_Id WHERE i.ingredient_Type LIKE",
         ingredientType,
         (err, row) => {
           if (err) return res.json({ status: 300, success: false, error: err });
@@ -392,35 +394,13 @@ app.post("/recipe", (req, res) => {
                         error: err,
                       });
                     let ingredientId = row.ingredient_Id;
-                    console.log("Ingredient id inside loop ", ingredientId);
+                    console.log("ingredient id", ingredientId);
                     db.run(
-                      `INSERT INTO RecipeIngredients (recipe_Id, ingredient_Id) VALUES (?, ?)`,
+                      `INSERT INTO Measurements (measure,recipe_Id,ingredient_Id) VALUES (?,?, ?)`,
+                      ingredients[j].entry,
                       id,
                       ingredientId
                     );
-
-                    db.run(
-                      `INSERT INTO Measurements (measure,recipe_Id) VALUES (?, ?)`,
-                      ingredients[j].entry,
-                      id
-                    ),
-                      db.each(
-                        "SELECT measure_Id FROM Measurements WHERE recipe_Id = ?",
-                        id,
-                        (err, row) => {
-                          if (err) {
-                            res.status(404).json({
-                              Error: err.message,
-                            });
-                          }
-                          let measureId = row.measure_Id;
-                          db.run(
-                            `UPDATE RecipeIngredients SET measure_Id =${measureId}  WHERE recipe_Id =(?) AND ingredient_Id = (?)`,
-                            id,
-                            ingredientId
-                          );
-                        }
-                      );
                   }
                 );
             }
@@ -474,7 +454,81 @@ app.patch("/recipe/:recipe_Id", (req, res) => {
 });
 
 // Replace Recipe
-app.put("/recipe/:recipe_Id", (req, res) => {});
+app.put("/recipe/:recipe_Id", (req, res) => {
+  const recipeId = req.params.recipe_Id;
+  console.log(recipeId);
+  if (req.cookies.usertype === "admin") {
+    const { name, category, ingredients, steps } = req.body;
+    let recipeName = name;
+    let categoryName = category;
+    let stepCount = steps.length;
+    db.serialize(() => {
+      db.each(
+        `UPDATE Recipes SET recipe_Name="${recipeName}", step_Count=${stepCount}, category="${categoryName}" WHERE recipe_Id=${recipeId}`
+      ),
+        db.each(
+          "SELECT recipe_Id FROM Recipes WHERE recipe_Name = ? ",
+          recipeName,
+          (err, row) => {
+            if (err)
+              return res.json({ status: 300, success: false, error: err });
+            for (let i = 0; i < steps.length; i++) {
+              db.each(
+                `UPDATE Steps SET  step_detail="${steps[i].text}" WHERE recipe_Id=${recipeId} AND step_Id=${steps[i].step_id}`,
+                (err, row) => {
+                  if (err)
+                    return res.json({
+                      status: 300,
+                      success: false,
+                      error: err,
+                    });
+                  console.log("i", i);
+                  console.log("steps row", row);
+                  console.log(steps[i].step_id);
+                }
+              );
+            }
+            for (let j = 0; j < ingredients.length; j++) {
+              db.each(
+                `INSERT OR IGNORE INTO Ingredients (ingredient_Type) VALUES(?)`,
+                ingredients[j].type
+              ),
+                db.each(
+                  "SELECT ingredient_Id FROM Ingredients WHERE ingredient_Type = ?",
+                  ingredients[j].type,
+                  (err, row) => {
+                    if (err)
+                      return res.json({
+                        status: 300,
+                        success: false,
+                        error: err,
+                      });
+                    let ingredientId = row.ingredient_Id;
+                    db.run(
+                      `UPDATE Measurements SET measure ="${ingredients[j].entry}", ingredient_Id=${ingredientId}  WHERE recipe_Id=${recipeId}`
+                    );
+                  }
+                );
+            }
+          },
+          () => {
+            return res.json({
+              status: 200,
+              message: "Recipe updated successfully",
+              success: true,
+            });
+          }
+        );
+    });
+  } else {
+    return res.json({
+      status: 403,
+      message:
+        "You are not authorized to access this, become a Premium user to get access",
+      success: false,
+    });
+  }
+});
 
 // Delete Recipe
 
@@ -497,14 +551,14 @@ app.delete("/recipe/:recipe_Id", (req, res) => {
           deletedRecord = res;
         }
       );
-      db.each(
-        `DELETE from RecipeIngredients WHERE recipe_Id = ?`,
-        req.params.recipe_Id,
-        (err, res) => {
-          if (err) return res.json({ status: 300, success: false, error: err });
-          deletedRecord = res;
-        }
-      );
+      // db.each(
+      //   `DELETE from RecipeIngredients WHERE recipe_Id = ?`,
+      //   req.params.recipe_Id,
+      //   (err, res) => {
+      //     if (err) return res.json({ status: 300, success: false, error: err });
+      //     deletedRecord = res;
+      //   }
+      // );
       db.each(
         `DELETE from Measurements WHERE recipe_Id = ?`,
         req.params.recipe_Id,
