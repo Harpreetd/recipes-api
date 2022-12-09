@@ -470,7 +470,6 @@ app.put("/recipe/:recipe_Id", (req, res) => {
                         error: err,
                       });
                     let ingredientId = row.ingredient_Id;
-
                     db.run(
                       `UPDATE Measurements SET measure ="${ingredients[j].entry}" WHERE recipe_Id=${recipeId} AND ingredient_Id=${ingredientId}`
                     );
